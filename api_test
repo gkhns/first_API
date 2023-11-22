@@ -1,0 +1,102 @@
+import requests
+import json
+import matplotlib.pyplot as plt
+
+def get_epss_data(params):
+    # Define the API endpoint and parameters
+    url = "https://api.first.org/data/v1/epss"
+    
+
+    # Make a GET request to the API
+    response = requests.get(url, params=params)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        # Check if the content type is JSON
+        if 'application/json' in response.headers['Content-Type']:
+            # Parse the response JSON data
+            data = response.json()
+            total_count = len(data['data'])
+
+            print(f'Total CVE Count={total_count} \n')
+
+            label = []
+            cve_list = []
+
+            for counter, item in enumerate(data['data'], start=1):
+                # Convert percentile to float and format to show only four digits
+                percentile_float = float(item['percentile'])
+                percentile_formatted = f"{percentile_float:.4f}"
+                #print(f"{counter}) {item['cve']} (Percentile={percentile_formatted})")
+
+
+                label.append(f"{item['cve']} (Percentile={percentile_formatted})")
+                cve_list.append(item['cve'])
+            return label, cve_list
+
+        else:
+            print("Error: Response content is not JSON.")
+    else:
+        # Print an error message if the request was not successful
+        print(f"Error: {response.status_code}, {response.text}")
+
+def plot_epss_timeframe(lbl, cve):
+    # Define the API endpoint and parameters
+    url = f"https://api.first.org/data/v1/epss?cve={cve}&scope=time-series"
+    #print(url)
+
+    # Make a GET request to the API
+    response = requests.get(url)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        # Check if the content type is JSON
+        if 'application/json' in response.headers['Content-Type']:
+            # Parse the response JSON data
+            data = response.json()
+            time_series = data['data'][0]['time-series']
+            #print(time_series)
+
+            epss_chg = []
+            last_30d = []
+            for j in time_series:
+                epss_chg.append(j['epss'])
+                last_30d.append(j['date'])
+
+            # Plotting
+            plt.plot(last_30d, epss_chg, color='blue', marker='o', linestyle='-', label=lbl)
+            plt.title('EPSS Timeframe')
+            plt.xlabel('Last 30 Days')
+            plt.ylabel('EPSS change')
+            plt.xticks(rotation=90)
+            plt.grid(True)
+            plt.legend()
+            plt.show()
+
+        else:
+            print("Error: Response content is not JSON.")
+    else:
+        # Print an error message if the request was not successful
+        print(f"Error: {response.status_code}, {response.text}")
+
+# Call the function with custom parameters
+# params = {
+    # 'cve': 'CVE-2021-40438',
+    # 'date': '2023-11-10',
+    # 'day': 10,
+    # 'epss-gt': 0.975,
+    # 'percentile-gt' : 0.99,
+    # 'epss-lt' : 0.5,
+    # 'percentile-lt' : 0.9,
+#}
+
+if __name__ == "__main__":
+    custom_params = {
+        'epss-gt': 0.975,
+        }
+    
+    # Call the function to execute the code
+    lbl, cve = get_epss_data(params=custom_params)
+
+    for i in range(len(lbl)):
+        plot_epss_timeframe(lbl[i],cve[i])
