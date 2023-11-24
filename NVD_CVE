@@ -1,4 +1,26 @@
 import requests
+import json
+
+def search_nvd_cve(cve_id):
+    base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    api_url = f"{base_url}?cveId={cve_id}"
+
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            cve_data = response.json()
+            return cve_data
+        else:
+            print(f"Failed to retrieve data. Status code: {response.status_code}")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error during the request: {e}")
+        return None
+    
 
 def cves_matching_CVSS_vectorString(cvssV3Metrics):
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
@@ -13,23 +35,59 @@ def cves_matching_CVSS_vectorString(cvssV3Metrics):
         print(f"Error: {e}")
         return None
 
-# Example usage:
-cvssV3Metrics = "AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:L/A:L"
-cves_data = cves_matching_CVSS_vectorString(cvssV3Metrics)
+if __name__ == "__main__":
 
-if cves_data:
-    # Process the retrieved CVE data
-    # print(json.dumps(cves_data, indent=2))
+    # INPUT 
+    cve_id = "CVE-2019-2807"     
+    cve_data = search_nvd_cve(cve_id)
 
-    for i in cves_data['vulnerabilities']:
-        print(i['cve']['id'])
-        #print(f"Description:{i['cve']['descriptions'][0]['value']}")
+    if cve_data:
+        time_stmp = cve_data['timestamp']
+        print(f'Timestamp: {time_stmp}')
 
-        if 'cvssMetricV30' in i['cve']['metrics']:
-            print(f"Base Score: {i['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']}")
+        description = cve_data['vulnerabilities'][0]['cve']['descriptions'][0]['value']
+        print(f'Description: {description}')
+
+        if 'cvssMetricV30' in cve_data['vulnerabilities'][0]['cve']['metrics']:
+            vector_string = cve_data['vulnerabilities'][0]['cve']['metrics']['cvssMetricV30'][0]['cvssData']['vectorString']
+            print(f'Vector String (CVSS 3.0): {vector_string}')
+            
+            base_score = cve_data['vulnerabilities'][0]['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']
+            print(f'Base Score (CVSS 3.0): {base_score}')
+
         else:
-            print(f"Base Score: {i['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']}")
+            vector_string = cve_data['vulnerabilities'][0]['cve']['metrics']['cvssMetricV31'][0]['cvssData']['vectorString']
+            print(f'Vector String (CVSS 3.1): {vector_string}')
+            
+            base_score = cve_data['vulnerabilities'][0]['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']
+            print(f'Base Score (CVSS 3.1): {base_score}')
+
         print("\n")
+        #print("ENTIRE OUTPUT")
+        #print(json.dumps(cve_data, indent=2))
+
+
+        print("CVEs with same vectorString:")
+
+        cves_data = cves_matching_CVSS_vectorString(vector_string[9:])
+
+        if cves_data:
+            # Process the retrieved CVE data
+            # # print(json.dumps(cves_data, indent=2))
+            
+            for i in cves_data['vulnerabilities']:
+                print(i['cve']['id'])
+                #print(f"Description:{i['cve']['descriptions'][0]['value']}")
+                
+                if 'cvssMetricV30' in i['cve']['metrics']:
+                    print(f"Base Score: {i['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']}")
+                else:
+                    print(f"Base Score: {i['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']}")
+                    
+                print("\n")
     
-else:
-    print("Failed to fetch CVE data.")
+        else:
+            print("Failed to fetch CVE data.")
+
+    else:
+        print(f"No data retrieved from the 'search_nvd_cve' function")
