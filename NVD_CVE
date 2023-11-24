@@ -1,0 +1,35 @@
+import requests
+
+def cves_matching_CVSS_vectorString(cvssV3Metrics):
+    base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    params = {"cvssV3Metrics": cvssV3Metrics}
+
+    try:
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()  # Raise an HTTPError for bad requests
+        cves_data = response.json()
+        return cves_data
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return None
+
+# Example usage:
+cvssV3Metrics = "AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:L/A:L"
+cves_data = cves_matching_CVSS_vectorString(cvssV3Metrics)
+
+if cves_data:
+    # Process the retrieved CVE data
+    # print(json.dumps(cves_data, indent=2))
+
+    for i in cves_data['vulnerabilities']:
+        print(i['cve']['id'])
+        #print(f"Description:{i['cve']['descriptions'][0]['value']}")
+
+        if 'cvssMetricV30' in i['cve']['metrics']:
+            print(f"Base Score: {i['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']}")
+        else:
+            print(f"Base Score: {i['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']}")
+        print("\n")
+    
+else:
+    print("Failed to fetch CVE data.")
