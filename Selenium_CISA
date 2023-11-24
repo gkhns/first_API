@@ -1,0 +1,50 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+def search_cve_vulnerability(cve_id):
+    # Create a new instance of the Firefox driver
+    driver = webdriver.Firefox()
+
+    # Navigate to the CISA Known Exploited Vulnerabilities Catalog page
+    url = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+    driver.get(url)
+    driver.maximize_window()
+
+    # Wait for the page to load (to accommodate slow networks)
+    driver.implicitly_wait(3)
+    print(f'Source: {driver.title} \n')
+
+    try:
+        # Wait for the search bar to be present
+        search_bar = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "edit-search-api-fulltext"))
+        )
+
+        # Type CVE ID and press Enter
+        search_bar.send_keys(cve_id)
+        search_bar.send_keys(Keys.RETURN)
+
+        # Wait for the summary element to be present
+        tags = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "c-teaser__summary"))
+        )
+
+        print("Vulnerability Summary:", tags.text)
+
+    except StaleElementReferenceException:
+        # If StaleElementReferenceException occurs, re-locate the element
+        tags = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "c-teaser__summary"))
+        )
+
+        print("Vulnerability Summary (after exception handling):", tags.text)
+
+    finally:
+        driver.close()
+
+
+search_cve_vulnerability("CVE-2023-4911")
